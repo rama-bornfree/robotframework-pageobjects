@@ -30,6 +30,8 @@ class _Keywords(object):
     _aliases = {}
     _alias_delimiter = "__name__"
 
+    has_registered_s2l_keywords = False
+
     @classmethod
     def is_obj_keyword(cls, obj):
         """ Determines whether the given object is a keyword.
@@ -41,21 +43,38 @@ class _Keywords(object):
         except AttributeError:
             return False
 
-        if inspect.isroutine(obj) and not name.startswith("_") and not _Keywords.is_method_excluded(name):
+        if inspect.isroutine(obj) and not name.startswith("_") and not _Keywords.is_method_excluded(name) and name not in ("get_keyword_names", "run_keyword"):
             return True
 
         else:
             return False
 
     @classmethod
-    def is_obj_keyword_by_name(cls, name, klass):
-        """ Determines whether a given name from the given class is a keyword
+    def is_obj_keyword_by_name(cls, name, inst):
+        """ Determines whether a given name from the given class instance is a keyword.
+        This is used by `get_keyword_names` in `robotpageobjects.page.Page` to decide
+        what keyword names to report.
+        :param name: The name of the member to check
+        :type name: str
+        :param inst: The class instance to check (such as a page object)
+        :type inst: object
         """
         obj = None
+        # If obj is a @property as oppose to a regular method or attribute,
+        # its method will be called immediately. This could cause an attempt
+        # to retrieve an element via webdriver, but when this method is called
+        # no browser is open, so that will cause Selenium2Library's decorator
+        # to attempt a screenshot - which will fail, because no browser is open.
+        # To prevent this, we temporarily set inst._has_run_on_failure to True.
+        # (_has_run_on_failure is used by Selenium2Library's decorator to prevent
+        # redundant screenshot attempts.)
+        inst._has_run_on_failure = True
         try:
-            obj = getattr(klass, name)
+            obj = getattr(inst, name)
         except Exception:
+            inst._has_run_on_failure = False
             return False
+        inst._has_run_on_failure = False
 
         return cls.is_obj_keyword(obj)
 
@@ -252,11 +271,8 @@ class _S2LWrapper(Selenium2Library):
             # S2L checks if its "run_on_failure" keyword is "Nothing". If it is, it won't do anything on failure.
             # We need this to prevent S2L from attempting to take a screenshot outside Robot.
         else:
-            # If in Robot, we want to make sure Selenium2Library is imported so its keywords are available,
-            # and so we can share its cache. When outside Robot, we won't share the cache with any import
-            # of Selenium2Library. This could be done with a monkey-patch,
-            # but we are punting until and unless this becomes an issue. See DCLT-708.
-            Context.import_s2l()
+            # This is for disambiguating keywords that are defined in multiple libraries.
+            Context.set_current_page("Selenium2Library")
 
         # Use Selenium2Library's cache for our page objects. That way you can run a keyword from any page object,
         # or from Selenium2Library, and not have to open a separate browser.
@@ -691,7 +707,6 @@ class _BaseActions(_S2LWrapper):
         :type locator: str or WebElement
         :returns: WebElement or list
         """
-
         if isinstance(locator, WebElement):
             return locator
 
@@ -701,7 +716,9 @@ class _BaseActions(_S2LWrapper):
         if "wait" in kwargs:
             del kwargs["wait"]
 
+
         self.driver.implicitly_wait(our_wait)
+        
 
         if locator in self.selectors:
             locator = self.resolve_selector(locator)

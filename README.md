@@ -1,10 +1,28 @@
 # Robot Framework Page Objects 
+
+**NOTE**: Though support was never guaranteed, NCBI is no longer able to maintain this project. We've moved
+off of Robot Framework due to lack of timely Python3 support in Robot Framework and the fact that the majority of our developers/test-writers prefer to write
+tests in Python. You are free to either fork the project to address any issues or to adopt the project.
+Please comment on [this issue](https://github.com/ncbi/robotframework-pageobjects/issues/61) if you'd like to adopt it. 
+
 ## Installing
 
     $ pip install robotframework-pageobjects
 ## Compatibility
 Currently `Robot Framework Page Objects` is developed and tested on Linux systems only. 
 Windows compatibility is unknown and probably broken. Pull requests are welcome.
+
+## Developing
+This package is developed by a core group of folks at [NCBI](http://www.ncbi.nlm.nih.gov) for our own use. We figured it might be useful for others so we open-sourced it. We are always willing to look at issues and even address them (sometimes). Please, though, understand that we only have cycles to address those issues that directly impact our testing. Otherwise, we are likely to ask you to fork, try to address the issue yourself, then issue a pull request. We are very willing to help you with that process. Whatever you do, create an issue in github, and we will try our best to answer your questions, address the issue ourself, or ask you to try.
+
+All branches in this repo are tied to the [Travis continuous integration system](https://travis-ci.org/ncbi/robotframework-pageobjects). Whenever we push a branch from our repo the build gets kicked off there and tests are run. When you fork a branch you should run tests locally. To run tests:
+
+1. `$ virtualenv env`
+2. `source env/bin/activate`
+3. `(env)$ pip install nose`
+4. `(env)$ nosetests -vs tests/test_*.py`
+
+Again, please feel free to ask for help.
 
 ## What it is 
 This Python package adds support for the [Page Object](http://martinfowler.com/bliki/PageObject.html) pattern with [Robot Framework](http://robotframework.org/) and Robot Framework's [Selenium2Library](https://github.com/rtomac/robotframework-selenium2library). Though this
@@ -520,6 +538,32 @@ This means you can pass selectors instead of locators to all Se2Lib methods that
 - if you write your own helper methods for finding or interacting with elements allow them to be passed 
 locators *and* selectors.
 - You can also pass an instance of a selenium WebElement to Se2Lib methods instead of a selector or locator
+
+Here is an example of a Robot test using a selector defined in a page object:
+
+    class MyPage(NCBIPage):
+        uri = "/somewhere"
+	  
+        selectors = {
+	    "first name": "css=#myform input[name=firstname]",
+	    "last name": "css=#myform input[name=lastname]",
+	    "form submit": "css=#myform input[type=submit]"
+	}
+					   
+    ....
+			    
+    *** Settings ***
+    Library  MyPage
+					     
+    *** Test Cases ***
+    Form Should Submit
+        [Setup]  Open My Page
+	Input Text  first name  Fleagle
+        Input Text  last name  Smith
+        Click Element  form submit
+	Page Should Contain  Thank you. Your form was submitted.
+	[Teardown]  Close
+
 
 #### Looking up elements from the end of a list
 

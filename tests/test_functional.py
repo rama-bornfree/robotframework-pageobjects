@@ -74,6 +74,12 @@ class SmokeTestCase(BaseTestCase):
         run = self.run_scenario("test_stack_trace.robot", v="baseurl:%s" % self.base_file_url, L="TRACE")
         self.assert_run(run, expected_returncode=1, search_output_xml="in raise_division_by_zero")
 
+    def test_no_screenshot_attempt_on_initializing_page_with_component(self):
+        self.set_baseurl_env()
+        run = self.run_scenario("test_page_with_component.robot")
+        self.assert_run(run, expected_returncode=0, search_output="PASS",
+                        not_in_output="Capture Page Screenshot")
+
 
 
 class SauceTestCase(BaseTestCase):
@@ -156,7 +162,6 @@ class ActionsTestCase(BaseTestCase):
         self.assert_screen_shots(0)
         self.run_scenario("test_fail.robot", variable="baseurl:%s" % self.base_file_url)
         self.assert_screen_shots(1)
-        #TODO DCLT-726: Change to 1 when we fix this bug.
 
     def test_robot_screen_shot_on_se2lib_keyword_failure(self):
         self.assert_screen_shots(0)
@@ -199,40 +204,35 @@ class ActionsTestCase(BaseTestCase):
         self.assert_run(run, expected_returncode=0, search_output="OK")
 
 class SelectorsTestCase(BaseTestCase):
-    """
-    @unittest.skip("NOT IMPLEMENTED YET: See DCLT-728")
+    def setUp(self):
+        super(SelectorsTestCase, self).setUp()
+        self.set_baseurl_env()
+
     def test_s2l_keyword_with_selector(self):
         run = self.run_scenario("test_s2l_keyword_with_selector.robot", variable="baseurl:%s" % self.base_file_url)
         self.assert_run(run, expected_returncode=0, search_output="PASS")
-    """
 
     def test_find_elements_with_selector(self):
-        self.set_baseurl_env()
         run = self.run_scenario("test_find_elements_with_selector.py")
         self.assert_run(run, expected_returncode=0, search_output="OK")
 
     def test_bad_selector_raises_exception(self):
-        self.set_baseurl_env()
         run = self.run_scenario("test_bad_selector.py")
         self.assert_run(run, expected_returncode=0, search_output="OK")
 
     def test_no_selector_raises_exception(self):
-        self.set_baseurl_env()
         run = self.run_scenario("test_no_selector.py")
         self.assert_run(run, expected_returncode=0, search_output="OK")
 
     def test_selector_template(self):
-        self.set_baseurl_env()
         run = self.run_scenario("test_templated_selector.py")
         self.assert_run(run, expected_returncode=0, search_output="OK")
 
     def test_selector_self_ref(self):
-        self.set_baseurl_env()
         run = self.run_scenario("test_selector_self_ref.py")
         self.assert_run(run, expected_returncode=0, search_output="OK")
 
     def test_no_robot_action_failing_should_not_warn_about_screenshot(self):
-        self.set_baseurl_env()
         run = self.run_scenario("test_fail.py")
         self.assertFalse("warn" in run.output.lower(), "No warning should be issued when a method fails outside "
                                                        "robot")
@@ -241,11 +241,16 @@ class SelectorsTestCase(BaseTestCase):
         # This run is duplicated, but it shows that SE2Lib library imported
         # with page objects works.
         run = self.run_scenario("test_template_passed.robot")
-        self.assert_run(run, expected_returncode=0, search_output="PASSED")
+        self.assert_run(run, expected_returncode=0, search_output="PASS")
 
     def robot_importing_se2lib_before_page_object_should_work(self):
         run = self.run_scenario("test_se2lib_imported_before_po.robot")
-        self.assert_run(run, expected_returncode=0, search_output="PASSED")
+        self.assert_run(run, expected_returncode=0, search_output="PASS")
+
+    def test_selector_with_se2lib_keyword(self):
+        self.set_baseurl_env()
+        run = self.run_scenario("test_selector_with_se2lib_keyword.robot")
+        self.assert_run(run, expected_returncode=0, search_output="PASS")
 
 
 class ComponentTestCase(BaseTestCase):
@@ -425,6 +430,11 @@ class KeywordsTestCase(BaseTestCase):
 
     def test_negative_index_in_table_keywords(self):
         run = self.run_scenario("test_negative_index_in_table_keywords.robot",
+                                variable="baseurl:%s" % self.base_file_url)
+        self.assert_run(run, expected_returncode=0, search_output="PASS")
+
+    def test_se2lib_keywords_are_still_available_if_both_se2lib_and_po_are_imported(self):
+        run = self.run_scenario("test_se2lib_called_before_po.robot",
                                 variable="baseurl:%s" % self.base_file_url)
         self.assert_run(run, expected_returncode=0, search_output="PASS")
 
